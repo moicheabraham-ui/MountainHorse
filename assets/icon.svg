@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#57b4ff"/><stop offset="1" stop-color="#1f5fd1"/>
+    </linearGradient>
+    <clipPath id="sq"><rect width="1024" height="1024" rx="224"/></clipPath>
+  </defs>
+  <g clip-path="url(#sq)">
+    <rect width="1024" height="1024" fill="url(#bg)"/>
+    <circle cx="800" cy="230" r="85" fill="#fff" opacity=".35"/>
+    <path d="M-20 780 L250 420 L420 640 L590 390 L800 690 L910 540 L1060 740 L1060 1060 L-20 1060Z" fill="#fff" opacity=".22"/>
+    <path d="M250 420 L196 492 L240 480 L270 510 L310 470Z M590 390 L528 478 L575 462 L605 500 L650 455Z" fill="#fff" opacity=".6"/>
+    <!-- horse head -->
+    <path fill="#fff" d="M430 270 C520 240 620 290 690 380 C750 460 810 560 855 650 C880 700 860 760 810 775 C770 785 735 765 710 745 C690 770 640 790 600 800 C590 860 600 940 620 1060 L280 1060 C270 880 300 700 340 560 C360 450 390 340 430 270Z"/>
+    <path fill="#dbe6f7" d="M600 800 C650 785 700 772 710 745 C690 800 690 900 700 1060 L620 1060 C600 940 590 860 600 800Z"/>
+    <path fill="#fff" d="M440 285 L468 140 L548 268Z"/>
+    <path fill="#dbe6f7" d="M466 255 L474 190 L512 262Z"/>
+    <path fill="#ffc933" d="M430 270 C380 300 340 420 320 560 C300 700 290 880 300 1060 L430 1060 C415 900 420 740 450 600 C470 500 500 420 545 350 C500 335 460 305 430 270Z"/>
+    <path fill="#ffc933" d="M476 292 C505 330 525 365 540 410 C490 395 462 350 476 292Z"/>
+    <circle cx="610" cy="432" r="21" fill="#1b2a4a"/>
+    <circle cx="617" cy="424" r="7" fill="#fff"/>
+    <ellipse cx="838" cy="682" rx="13" ry="21" transform="rotate(-28 838 682)" fill="#1b2a4a" opacity=".75"/>
+  </g>
+</svg>

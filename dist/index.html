@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>SftpDrive</title>
+<title>Mountain Horse</title>
 <style>
   :root { color-scheme: dark; --bg:#14161a; --card:#1d2026; --line:#2c313a; --fg:#e6e8eb; --mut:#8b93a1; --ok:#22c55e; --acc:#3b82f6; --bad:#ef4444; }
   * { box-sizing: border-box; }
@@ -31,7 +31,7 @@
 </style>
 </head>
 <body>
-<h1>SftpDrive <span style="display:flex;gap:14px;align-items:center;font-weight:400;font-size:13px"><label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)"><input type="checkbox" id="autostart"> Iniciar con Windows</label><button id="new">+ Nueva conexión</button></span></h1>
+<h1><img src="icon.png" width="28" height="28" style="vertical-align:middle;margin-right:8px;border-radius:7px">Mountain Horse <span style="display:flex;gap:14px;align-items:center;font-weight:400;font-size:13px"><label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)"><input type="checkbox" id="autostart"> Iniciar con Windows</label><button id="new">+ Nueva conexión</button></span></h1>
 <div id="banner" class="banner" hidden>
   Falta instalar <b>WinFsp</b> y <b>SSHFS-Win</b> para poder montar unidades:
   <a href="https://github.com/winfsp/winfsp/releases" target="_blank">WinFsp</a> ·
@@ -51,7 +51,7 @@
   <label class="full" id="keyRow" hidden>Clave privada (vacío = %USERPROFILE%\.ssh\id_rsa; solo claves sin frase de contraseña)
     <span style="display:flex;gap:8px"><input name="keyPath" style="flex:1" placeholder="C:\Users\tu\.ssh\mi_clave"><button type="button" class="ghost" id="browse">Examinar…</button></span>
   </label>
-  <label class="check full"><input name="autoMount" type="checkbox"> Montar automáticamente al abrir SftpDrive</label>
+  <label class="check full"><input name="autoMount" type="checkbox"> Montar automáticamente al abrir Mountain Horse</label>
   <div class="actions"><button type="button" class="ghost" id="cancel">Cancelar</button><button>Guardar</button></div>
 </form>
 <div id="list"></div>

@@ -264,7 +264,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         menu.append(&MenuItem::with_id(app, format!("toggle:{}", c.id), label, true, None::<&str>)?)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, "open", "Abrir SftpDrive", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, "open", "Abrir Mountain Horse", true, None::<&str>)?)?;
     menu.append(&MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?)?;
     Ok(menu)
 }
@@ -318,7 +318,7 @@ fn main() {
             let menu = build_menu(&handle)?;
             TrayIconBuilder::with_id("main")
                 .icon(app.default_window_icon().ok_or("sin icono")?.clone())
-                .tooltip("SftpDrive")
+                .tooltip("Mountain Horse")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
@@ -368,5 +368,5 @@ fn main() {
             set_autostart
         ])
         .run(tauri::generate_context!())
-        .expect("error al iniciar SftpDrive");
+        .expect("error al iniciar Mountain Horse");
 }
