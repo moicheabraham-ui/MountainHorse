@@ -1,17 +1,46 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "SftpDrive",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "online.moiche.sftpdrive",
-  "build": { "frontendDist": "../dist" },
+  "build": {
+    "frontendDist": "../dist"
+  },
   "app": {
     "withGlobalTauri": true,
-    "windows": [{ "label": "main", "visible": false, "title": "SftpDrive", "width": 860, "height": 680, "minWidth": 640, "minHeight": 480 }],
-    "security": { "csp": null }
+    "windows": [
+      {
+        "label": "main",
+        "visible": false,
+        "title": "SftpDrive",
+        "width": 860,
+        "height": 680,
+        "minWidth": 640,
+        "minHeight": 480
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"]
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/*"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "perMachine",
+        "installerHooks": "installer-hooks.nsh"
+      }
+    }
   }
 }

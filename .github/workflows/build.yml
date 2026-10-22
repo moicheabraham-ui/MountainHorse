@@ -15,6 +15,14 @@ jobs:
         with: { node-version: 22 }
       - run: npm install
       - run: npx tauri icon app-icon.png
+      - name: Download WinFsp and SSHFS-Win (bundled into the installer)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p src-tauri/resources
+          gh release download --repo winfsp/winfsp --pattern 'winfsp-*.msi' --output src-tauri/resources/winfsp.msi
+          gh release download --repo winfsp/sshfs-win --pattern 'sshfs-win-*-x64.msi' --output src-tauri/resources/sshfs-win.msi
       - run: npx tauri build
       - uses: actions/upload-artifact@v4
         with:

@@ -12,5 +12,8 @@ It does not implement SFTP. It shells out to `net use X: \\sshfs.r\user@host!por
 ## Build
 No Rust toolchain on the dev machine (Linux). GitHub Actions (`.github/workflows/build.yml`, windows-latest) builds the NSIS installer and uploads it as an artifact. Icons are generated in CI from `app-icon.png` (`src-tauri/icons/` is gitignored).
 
+## Installer
+The NSIS installer (perMachine, asks for admin) bundles the WinFsp and SSHFS-Win MSIs (downloaded in CI from their latest GitHub releases into `src-tauri/resources/`) and `installer-hooks.nsh` installs them silently if missing. Uninstall leaves them in place.
+
 ## Known gaps / ideas
 No tray icon, no auto-mount at login, no SSH key picker, password passed to `net use` as an argument. Mount command syntax is untested on a real Windows machine.
