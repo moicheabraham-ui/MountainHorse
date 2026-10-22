@@ -31,7 +31,7 @@
 </style>
 </head>
 <body>
-<h1>SftpDrive <button id="new">+ Nueva conexión</button></h1>
+<h1>SftpDrive <span style="display:flex;gap:14px;align-items:center;font-weight:400;font-size:13px"><label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)"><input type="checkbox" id="autostart"> Iniciar con Windows</label><button id="new">+ Nueva conexión</button></span></h1>
 <div id="banner" class="banner" hidden>
   Falta instalar <b>WinFsp</b> y <b>SSHFS-Win</b> para poder montar unidades:
   <a href="https://github.com/winfsp/winfsp/releases" target="_blank">WinFsp</a> ·
@@ -47,7 +47,11 @@
   <label>Usuario <input name="user" required></label>
   <label>Contraseña <input name="password" type="password" placeholder="(dejar vacío para no cambiarla)"></label>
   <label class="full">Carpeta remota <input name="remotePath" placeholder="/home/usuario (vacío = carpeta personal)"></label>
-  <label class="check full"><input name="useKey" type="checkbox"> Usar clave SSH (%USERPROFILE%\.ssh\id_rsa) en vez de contraseña</label>
+  <label class="check full"><input name="useKey" type="checkbox"> Usar clave SSH en vez de contraseña</label>
+  <label class="full" id="keyRow" hidden>Clave privada (vacío = %USERPROFILE%\.ssh\id_rsa; solo claves sin frase de contraseña)
+    <span style="display:flex;gap:8px"><input name="keyPath" style="flex:1" placeholder="C:\Users\tu\.ssh\mi_clave"><button type="button" class="ghost" id="browse">Examinar…</button></span>
+  </label>
+  <label class="check full"><input name="autoMount" type="checkbox"> Montar automáticamente al abrir SftpDrive</label>
   <div class="actions"><button type="button" class="ghost" id="cancel">Cancelar</button><button>Guardar</button></div>
 </form>
 <div id="list"></div>
@@ -81,11 +85,26 @@ async function refresh() {
 function openForm(c) {
   form.reset();
   form.id.value = c?.id || '';
-  for (const k of ['name', 'drive', 'host', 'port', 'user', 'remotePath']) if (c) form[k].value = c[k];
+  for (const k of ['name', 'drive', 'host', 'port', 'user', 'remotePath', 'keyPath']) if (c) form[k].value = c[k] || '';
   form.useKey.checked = !!c?.useKey;
+  form.autoMount.checked = !!c?.autoMount;
+  syncKeyRow();
   if (!c) form.drive.value = letters.find(l => !conns.some(x => x.drive === l)) || 'Z';
   form.classList.add('open');
 }
+
+const syncKeyRow = () => { $('#keyRow').hidden = !form.useKey.checked; };
+form.useKey.onchange = syncKeyRow;
+$('#browse').onclick = async () => {
+  const picked = await window.__TAURI__.dialog.open({ title: 'Clave privada SSH', multiple: false, directory: false });
+  if (picked) form.keyPath.value = picked;
+};
+
+const autostart = $('#autostart');
+invoke('get_autostart').then(v => { autostart.checked = v; });
+autostart.onchange = async () => {
+  try { await invoke('set_autostart', { enabled: autostart.checked }); } catch (err) { show(err); autostart.checked = !autostart.checked; }
+};
 
 $('#new').onclick = () => openForm();
 $('#cancel').onclick = () => form.classList.remove('open');
@@ -97,7 +116,8 @@ form.onsubmit = async (e) => {
   try {
     await invoke('save_connection', {
       conn: { id: f.id.value, name: f.name.value, host: f.host.value, port: +f.port.value, user: f.user.value,
-              remotePath: f.remotePath.value, drive: f.drive.value, useKey: f.useKey.checked },
+              remotePath: f.remotePath.value, drive: f.drive.value, useKey: f.useKey.checked,
+              keyPath: f.keyPath.value, autoMount: f.autoMount.checked },
       password: f.password.value || null,
     });
     f.classList.remove('open');
