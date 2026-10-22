@@ -1,7 +1,11 @@
 name: build
 on:
   push:
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   windows:
     runs-on: windows-latest
@@ -16,3 +20,9 @@ jobs:
         with:
           name: SftpDrive-windows
           path: src-tauri/target/release/bundle/nsis/*.exe
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" src-tauri/target/release/bundle/nsis/*.exe --title "SftpDrive $GITHUB_REF_NAME" --generate-notes
