@@ -4,8 +4,11 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
-    time::{SystemTime, UNIX_EPOCH},
+    collections::HashMap,
+    io::Write,
+    process::{Child, Command, Stdio},
+    sync::{Mutex, OnceLock},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
@@ -175,43 +178,107 @@ fn delete_connection(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
+// One sshfs.exe per mounted connection. It is started directly (not through `net use` + the WinFsp
+// launcher) so uid/gid can be mapped to the current Windows user; the launcher maps the remote owner to
+// an unknown SID, which leaves your own folders read-only.
+fn children() -> &'static Mutex<HashMap<String, Child>> {
+    static C: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
+    C.get_or_init(Default::default)
+}
+
+fn sshfs_path() -> Option<&'static str> {
+    [r"C:\Program Files\SSHFS-Win\bin\sshfs.exe", r"C:\Program Files (x86)\SSHFS-Win\bin\sshfs.exe"]
+        .into_iter()
+        .find(|p| Path::new(p).exists())
+}
+
+fn kill_children() {
+    for (_, mut child) in children().lock().unwrap().drain() {
+        let _ = child.kill();
+    }
+}
+
 fn mount_conn(app: &AppHandle, id: &str) -> Result<(), String> {
     let c = load(app)?.into_iter().find(|c| c.id == id).ok_or("Conexión no encontrada")?;
     if is_mounted(&c.drive) {
         return Err(format!("La unidad {}: ya está en uso.", c.drive));
     }
-    // \\sshfs.r = path from the server root, \\sshfs.kr = same with key auth
-    let prefix = if c.use_key { "sshfs.kr" } else { "sshfs.r" };
-    let mut host = c.host.clone();
-    if c.use_key && !c.key_path.is_empty() {
-        let key = c.key_path.replace('\\', "/");
-        set_ssh_block(
-            &c.id,
-            Some(format!("Host sftpdrive-{id}\n  HostName {}\n  Port {}\n  IdentityFile \"{key}\"\n", c.host, c.port, id = c.id)),
-        )?;
-        host = format!("sftpdrive-{}", c.id);
-    } else {
-        let _ = set_ssh_block(&c.id, None);
-    }
-    let path = c.remote_path.trim().replace('/', "\\");
-    let path = if path.is_empty() || path.starts_with('\\') { path } else { format!("\\{}", path) };
-    let unc = format!("\\\\{}\\{}@{}!{}{}", prefix, c.user, host, c.port, path);
+    let exe = sshfs_path().ok_or("SSHFS-Win no está instalado.")?;
+    // old versions put a Host alias for the key in ssh config; it is not needed any more
+    let _ = set_ssh_block(&c.id, None);
+    let path = c.remote_path.trim().replace('\\', "/");
+    let path = if path.starts_with('/') { path } else { format!("/{}", path) };
 
-    let mut args = vec!["use".to_string(), format!("{}:", c.drive), unc];
-    if !c.use_key {
+    let mut cmd = Command::new(exe);
+    cmd.arg(format!("{}@{}:{}", c.user, c.host, path))
+        .arg(format!("{}:", c.drive))
+        .args(["-f", "-ouid=-1,gid=-1", "-oidmap=user", "-ofstypename=SSHFS", "-orellinks"])
+        .args(["-oStrictHostKeyChecking=no", "-oUserKnownHostsFile=/dev/null"])
+        .arg(format!("-oPort={}", c.port))
+        .arg(format!("-oVolumePrefix=/sshfs/{}@{}", c.user, c.host))
+        .env("PATH", format!(r"{};{}", Path::new(exe).parent().unwrap().display(), std::env::var("PATH").unwrap_or_default()))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    let password = if c.use_key {
+        if !c.key_path.is_empty() {
+            cmd.arg(format!("-oIdentityFile={}", c.key_path.replace('\\', "/")));
+        }
+        cmd.arg("-oPreferredAuthentications=publickey");
+        None
+    } else {
         let pw = keyring::Entry::new(KEYRING_SERVICE, &c.id)
             .and_then(|e| e.get_password())
             .map_err(|_| "Falta la contraseña: edita la conexión y guárdala.".to_string())?;
-        args.push(pw);
+        cmd.arg("-opassword_stdin");
+        Some(pw)
+    };
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
     }
-    args.push(format!("/user:{}", c.user));
-    args.push("/persistent:no".into());
-    run_cmd("net", &args)
+    let mut child = cmd.spawn().map_err(err)?;
+    if let Some(mut stdin) = child.stdin.take() {
+        if let Some(pw) = password {
+            let _ = writeln!(stdin, "{}", pw);
+        }
+    }
+    // wait until the drive shows up, or sshfs gives up (bad password, host unreachable...)
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        if is_mounted(&c.drive) {
+            children().lock().unwrap().insert(c.id.clone(), child);
+            return Ok(());
+        }
+        if let Some(status) = child.try_wait().map_err(err)? {
+            let mut msg = String::new();
+            if let Some(mut e) = child.stderr.take() {
+                let _ = std::io::Read::read_to_string(&mut e, &mut msg);
+            }
+            let msg = msg.trim();
+            return Err(if msg.is_empty() { format!("sshfs terminó con {}", status) } else { msg.to_string() });
+        }
+        if Instant::now() > deadline {
+            let _ = child.kill();
+            return Err("Tiempo de espera agotado al montar (¿servidor inaccesible?).".into());
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
 }
 
 fn unmount_conn(app: &AppHandle, id: &str) -> Result<(), String> {
     let c = load(app)?.into_iter().find(|c| c.id == id).ok_or("Conexión no encontrada")?;
-    run_cmd("net", &["use".into(), format!("{}:", c.drive), "/delete".into(), "/y".into()])
+    let child = children().lock().unwrap().remove(id);
+    match child {
+        Some(mut child) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            Ok(())
+        }
+        // mounted by an older version (net use) or by a previous run of the app
+        None => run_cmd("net", &["use".into(), format!("{}:", c.drive), "/delete".into(), "/y".into()]),
+    }
 }
 
 #[tauri::command]
@@ -297,9 +364,10 @@ fn auto_mount(app: AppHandle) {
 
 #[tauri::command]
 fn check_prereqs() -> bool {
-    [r"C:\Program Files\SSHFS-Win\bin\sshfs-win.exe", r"C:\Program Files (x86)\SSHFS-Win\bin\sshfs-win.exe"]
-        .iter()
-        .any(|p| Path::new(p).exists())
+    let exists = |paths: &[&str]| paths.iter().any(|p| Path::new(p).exists());
+    let sshfs = exists(&[r"C:\Program Files\SSHFS-Win\bin\sshfs-win.exe", r"C:\Program Files (x86)\SSHFS-Win\bin\sshfs-win.exe"]);
+    let winfsp = exists(&[r"C:\Program Files (x86)\WinFsp\bin\winfsp-x64.dll", r"C:\Program Files\WinFsp\bin\winfsp-x64.dll"]);
+    sshfs && winfsp
 }
 
 fn main() {
@@ -323,7 +391,10 @@ fn main() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "open" => show_window(app),
-                    "quit" => app.exit(0),
+                    "quit" => {
+                        kill_children();
+                        app.exit(0)
+                    }
                     other => {
                         if let Some(id) = other.strip_prefix("toggle:") {
                             let (app, id) = (app.clone(), id.to_string());

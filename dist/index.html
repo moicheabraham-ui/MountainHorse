@@ -2,51 +2,103 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mountain Horse</title>
 <style>
-  :root { color-scheme: dark; --bg:#14161a; --card:#1d2026; --line:#2c313a; --fg:#e6e8eb; --mut:#8b93a1; --ok:#22c55e; --acc:#3b82f6; --bad:#ef4444; }
-  * { box-sizing: border-box; }
-  body { margin:0; padding:20px; background:var(--bg); color:var(--fg); font:14px system-ui, sans-serif; }
-  h1 { font-size:18px; margin:0 0 16px; display:flex; justify-content:space-between; align-items:center; }
-  button { background:var(--acc); color:#fff; border:0; border-radius:6px; padding:7px 14px; cursor:pointer; font:inherit; }
-  button.ghost { background:transparent; border:1px solid var(--line); color:var(--fg); }
-  button.bad { background:transparent; border:1px solid var(--bad); color:var(--bad); }
-  .banner { background:#3b2a12; border:1px solid #92602a; padding:10px 14px; border-radius:8px; margin-bottom:16px; }
-  .banner a { color:#fbbf24; }
-  .row { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:10px; display:flex; gap:12px; align-items:center; }
+  :root {
+    color-scheme: dark;
+    --bg:#0e1422; --bg2:#121a2c; --card:#172033; --card2:#1c2740; --line:#26334f; --fg:#eaf0fb; --mut:#8c9bb8;
+    --acc:#4aa3ff; --acc2:#2b6fe0; --gold:#ffc933; --ok:#34d399; --bad:#f87171; --warn-bg:#35280f; --warn-line:#8a6420;
+    --shadow:0 8px 24px rgba(0,0,0,.28);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --bg:#eef3fb; --bg2:#e4ecf8; --card:#ffffff; --card2:#f5f8fd; --line:#d5dfef; --fg:#14213d; --mut:#5e6c88;
+      --acc:#2b7fff; --acc2:#1f5fd1; --gold:#b98700; --ok:#12a56f; --bad:#dc3f3f; --warn-bg:#fff6dc; --warn-line:#e8c872;
+      --shadow:0 8px 24px rgba(31,95,209,.12);
+    }
+  }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; min-height:100vh; padding:24px 28px 40px; color:var(--fg); font:14px/1.45 "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+         background:radial-gradient(900px 380px at 85% -120px, rgba(74,163,255,.22), transparent 70%), var(--bg); }
+  header { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+  header img { width:44px; height:44px; border-radius:12px; box-shadow:var(--shadow); }
+  header h1 { margin:0; font-size:22px; letter-spacing:-.2px; line-height:1.1; }
+  header h1 small { display:block; margin-top:3px; font-size:12px; font-weight:400; color:var(--mut); letter-spacing:0; }
+  header .spacer { flex:1; }
+  button { font:inherit; cursor:pointer; border:1px solid transparent; border-radius:8px; padding:7px 14px; color:#fff;
+           background:linear-gradient(180deg, var(--acc), var(--acc2)); font-weight:600; transition:filter .12s, transform .05s; }
+  button:hover { filter:brightness(1.1); }
+  button:active { transform:translateY(1px); }
+  button:disabled { opacity:.5; cursor:default; }
+  button.ghost { background:transparent; color:var(--fg); border-color:var(--line); font-weight:500; }
+  button.ghost:hover { background:var(--card2); filter:none; }
+  button.bad { background:transparent; color:var(--bad); border-color:transparent; font-weight:500; }
+  button.bad:hover { background:rgba(248,113,113,.12); filter:none; }
+  button.unmount { background:transparent; color:var(--fg); border-color:var(--line); }
+  .switch { display:flex; align-items:center; gap:9px; color:var(--mut); font-size:13px; cursor:pointer; user-select:none; flex-direction:row; font-weight:400; }
+  .switch input[type=checkbox] { appearance:none; width:34px; height:20px; border-radius:20px; background:var(--line); position:relative; margin:0; cursor:pointer; transition:background .15s; padding:0; border:0; flex:none; }
+  .switch input[type=checkbox]::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform .15s; }
+  .switch input[type=checkbox]:checked { background:var(--acc); }
+  .switch input[type=checkbox]:checked::after { transform:translateX(14px); }
+  .banner { background:var(--warn-bg); border:1px solid var(--warn-line); padding:11px 14px; border-radius:10px; margin-bottom:18px; }
+  .banner a { color:var(--gold); }
+  #msg { margin-bottom:14px; color:var(--bad); white-space:pre-wrap; }
+  #msg:empty { display:none; }
+  .row { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:12px; display:flex; gap:14px; align-items:center;
+         box-shadow:var(--shadow); transition:border-color .15s; }
+  .row:hover { border-color:var(--acc); }
+  .letter { width:46px; height:46px; flex:none; border-radius:12px; display:grid; place-items:center; font-weight:700; font-size:18px;
+            background:var(--card2); border:1px solid var(--line); color:var(--mut); }
+  .row.on .letter { background:linear-gradient(160deg, var(--acc), var(--acc2)); color:#fff; border-color:transparent; }
   .row .info { flex:1; min-width:0; }
-  .row .name { font-weight:600; }
-  .row .sub { color:var(--mut); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .dot { width:9px; height:9px; border-radius:50%; background:var(--line); flex:none; }
-  .dot.on { background:var(--ok); }
-  .empty { color:var(--mut); text-align:center; padding:40px 0; }
-  form { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; display:none; grid-template-columns:1fr 1fr; gap:10px; }
+  .row .name { font-weight:600; font-size:15px; display:flex; align-items:center; gap:9px; }
+  .pill { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; color:var(--mut); background:var(--card2); border:1px solid var(--line); }
+  .row.on .pill { color:var(--ok); background:rgba(52,211,153,.12); border-color:rgba(52,211,153,.35); }
+  .row .sub { color:var(--mut); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
+  .actions-row { display:flex; gap:6px; flex:none; }
+  .empty { text-align:center; padding:56px 20px; color:var(--mut); border:1px dashed var(--line); border-radius:14px; }
+  .empty img { width:72px; height:72px; border-radius:18px; margin-bottom:10px; }
+  .empty b { display:block; color:var(--fg); font-size:16px; margin-bottom:4px; }
+  form { display:none; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:18px; grid-template-columns:1fr 1fr; gap:12px 14px; box-shadow:var(--shadow); }
   form.open { display:grid; }
-  label { display:flex; flex-direction:column; gap:4px; color:var(--mut); font-size:12px; }
-  input, select { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:7px 9px; font:inherit; }
+  form h2 { grid-column:1 / -1; margin:0; font-size:15px; }
+  label { display:flex; flex-direction:column; gap:5px; color:var(--mut); font-size:12px; font-weight:600; }
+  input, select { background:var(--bg2); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; font-weight:400; outline:none; }
+  input:focus, select:focus { border-color:var(--acc); box-shadow:0 0 0 3px rgba(74,163,255,.2); }
+  input[type=checkbox] { accent-color:var(--acc); width:16px; height:16px; padding:0; }
   .full { grid-column:1 / -1; }
-  .check { flex-direction:row; align-items:center; gap:8px; color:var(--fg); }
-  .actions { grid-column:1 / -1; display:flex; gap:8px; justify-content:flex-end; }
-  #msg { margin-bottom:12px; color:var(--bad); white-space:pre-wrap; }
+  .check { flex-direction:row; align-items:center; gap:9px; color:var(--fg); font-weight:400; font-size:13px; }
+  .actions { grid-column:1 / -1; display:flex; gap:8px; justify-content:flex-end; margin-top:4px; }
+  @media (max-width:640px) { form { grid-template-columns:1fr; } .row { flex-wrap:wrap; } .actions-row { width:100%; justify-content:flex-end; } }
 </style>
 </head>
 <body>
-<h1><img src="icon.png" width="28" height="28" style="vertical-align:middle;margin-right:8px;border-radius:7px">Mountain Horse <span style="display:flex;gap:14px;align-items:center;font-weight:400;font-size:13px"><label style="flex-direction:row;align-items:center;gap:6px;color:var(--fg)"><input type="checkbox" id="autostart"> Iniciar con Windows</label><button id="new">+ Nueva conexión</button></span></h1>
+<header>
+  <img src="icon.png" alt="">
+  <h1>Mountain Horse<small>Tus servidores SFTP como unidades de Windows</small></h1>
+  <span class="spacer"></span>
+  <label class="switch"><input type="checkbox" id="autostart"> Iniciar con Windows</label>
+  <button id="new">+ Nueva conexión</button>
+</header>
 <div id="banner" class="banner" hidden>
-  Falta instalar <b>WinFsp</b> y <b>SSHFS-Win</b> para poder montar unidades:
+  Falta instalar (o reparar) <b>WinFsp</b> y <b>SSHFS-Win</b> para poder montar unidades; si ya los instalaste, reinicia el PC:
   <a href="https://github.com/winfsp/winfsp/releases" target="_blank">WinFsp</a> ·
   <a href="https://github.com/winfsp/sshfs-win/releases" target="_blank">SSHFS-Win</a>
 </div>
 <div id="msg"></div>
 <form id="form">
+  <h2>Conexión SFTP</h2>
   <input type="hidden" name="id">
-  <label>Nombre <input name="name" required></label>
+  <label>Nombre <input name="name" placeholder="Mi servidor" required></label>
   <label>Unidad <select name="drive"></select></label>
   <label>Servidor <input name="host" placeholder="192.168.1.10" required></label>
   <label>Puerto <input name="port" type="number" value="22" required></label>
   <label>Usuario <input name="user" required></label>
   <label>Contraseña <input name="password" type="password" placeholder="(dejar vacío para no cambiarla)"></label>
-  <label class="full">Carpeta remota <input name="remotePath" placeholder="/home/usuario (vacío = carpeta personal)"></label>
+  <label class="full">Carpeta remota <input name="remotePath" placeholder="/home/usuario (vacío = raíz del servidor)"></label>
   <label class="check full"><input name="useKey" type="checkbox"> Usar clave SSH en vez de contraseña</label>
   <label class="full" id="keyRow" hidden>Clave privada (vacío = %USERPROFILE%\.ssh\id_rsa; solo claves sin frase de contraseña)
     <span style="display:flex;gap:8px"><input name="keyPath" style="flex:1" placeholder="C:\Users\tu\.ssh\mi_clave"><button type="button" class="ghost" id="browse">Examinar…</button></span>
@@ -70,16 +122,18 @@ const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','
 async function refresh() {
   conns = await invoke('list_connections');
   $('#list').innerHTML = conns.length ? conns.map(c => `
-    <div class="row">
-      <span class="dot ${c.mounted ? 'on' : ''}"></span>
+    <div class="row ${c.mounted ? 'on' : ''}">
+      <div class="letter">${esc(c.drive)}:</div>
       <div class="info">
-        <div class="name">${esc(c.name)} <span class="sub">(${esc(c.drive)}:)</span></div>
-        <div class="sub">${esc(c.user)}@${esc(c.host)}:${c.port}${esc(c.remotePath || '')}</div>
+        <div class="name">${esc(c.name)} <span class="pill">${c.mounted ? 'Montada' : 'Desconectada'}</span></div>
+        <div class="sub">${esc(c.user)}@${esc(c.host)}:${c.port}${esc(c.remotePath || '/')}</div>
       </div>
-      <button data-a="${c.mounted ? 'unmount' : 'mount'}" data-id="${c.id}">${c.mounted ? 'Desmontar' : 'Montar'}</button>
-      <button class="ghost" data-a="edit" data-id="${c.id}">Editar</button>
-      <button class="bad" data-a="delete" data-id="${c.id}">Borrar</button>
-    </div>`).join('') : '<div class="empty">Aún no hay conexiones.</div>';
+      <div class="actions-row">
+        <button class="${c.mounted ? 'unmount' : ''}" data-a="${c.mounted ? 'unmount' : 'mount'}" data-id="${c.id}">${c.mounted ? 'Desmontar' : 'Montar'}</button>
+        <button class="ghost" data-a="edit" data-id="${c.id}">Editar</button>
+        <button class="bad" data-a="delete" data-id="${c.id}">Borrar</button>
+      </div>
+    </div>`).join('') : '<div class="empty"><img src="icon.png" alt=""><b>Aún no hay conexiones</b>Pulsa «Nueva conexión» para montar tu primer servidor SFTP como una unidad.</div>';
 }
 
 function openForm(c) {
