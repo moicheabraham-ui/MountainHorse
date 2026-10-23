@@ -13,6 +13,9 @@
   <img src="docs/images/ui-main.png" width="760" alt="Mountain Horse main window with three connections">
 </p>
 
+> [!WARNING]
+> **This is a vibe-coded app.** Mountain Horse was written almost entirely by an AI assistant (Claude Code) through conversation, with a human directing the work and testing it on a single Windows PC. It has not had a security audit or broad testing. It handles server passwords and mounts remote file systems, so review the code and use it at your own risk, ideally not on critical servers yet. Issues and pull requests are welcome.
+
 ## Features
 
 - **Drive letters for SFTP**: servers show up in Explorer as `Z:`, `Y:`, ... and work with any app.
@@ -70,6 +73,10 @@ The GitHub Actions workflow in `.github/workflows/build.yml` does exactly this a
 - Passwords are kept in Windows Credential Manager (service `SftpDrive`).
 - Host keys are not verified (`StrictHostKeyChecking=no`), as SSHFS-Win does by default. Use it on networks you trust.
 - SSH keys with a passphrase are not supported.
+
+## About this project
+
+Mountain Horse is a vibe-coded project: the Rust backend, the interface, the installer scripts, the CI workflow, the screenshots and this documentation were produced with an AI coding assistant (Claude Code) from natural-language instructions. A human decided what to build, ran it on their own machine, and reported what worked and what did not. Expect rough edges, and read the code before trusting it with anything important.
 
 ## Credits
 
