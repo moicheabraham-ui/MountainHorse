@@ -65,9 +65,31 @@ fn save(app: &AppHandle, list: &[Connection]) -> Result<(), String> {
     fs::write(store_path(app)?, serde_json::to_string_pretty(list).map_err(err)?).map_err(err)
 }
 
-// host/user end up inside an SSHFS-Win UNC path, so these characters would change its meaning
+// host/user end up in the sshfs command line (`user@host:path`, `-oVolumePrefix=...`), so only a strict
+// whitelist is allowed: no leading '-' (would be parsed as an option) and no ',' (separates -o options).
 fn clean(s: &str) -> bool {
-    !s.is_empty() && !s.contains(|c: char| c.is_whitespace() || "\\/!@".contains(c))
+    !s.is_empty()
+        && s.len() <= 253
+        && !s.starts_with('-')
+        && s.chars().all(|c| c.is_ascii_alphanumeric() || "._-".contains(c))
+}
+
+// Also run before mounting: connections.json can be edited by hand, so it is not trusted.
+fn validate(c: &Connection) -> Result<(), String> {
+    if !clean(&c.host) || !clean(&c.user) || c.port == 0 {
+        return Err("Revisa servidor, usuario y puerto (solo letras, números, . _ -).".into());
+    }
+    if c.drive.len() != 1 || !c.drive.chars().all(|c| c.is_ascii_uppercase()) {
+        return Err("La unidad debe ser una letra (A-Z).".into());
+    }
+    // key_path goes inside `-oIdentityFile=...`; a ',' would let it add more ssh options (e.g. ProxyCommand)
+    if c.key_path.contains(|ch: char| matches!(ch, '"' | ',' | '\n' | '\r' | '\0')) {
+        return Err("La ruta de la clave no es válida (no puede contener comas ni comillas).".into());
+    }
+    if c.use_key && !c.key_path.is_empty() && !Path::new(&c.key_path).is_file() {
+        return Err("No se encuentra el archivo de la clave privada.".into());
+    }
+    Ok(())
 }
 
 fn is_mounted(drive: &str) -> bool {
@@ -139,16 +161,11 @@ fn list_connections(app: AppHandle) -> Result<Vec<View>, String> {
 fn save_connection(app: AppHandle, mut conn: Connection, password: Option<String>) -> Result<(), String> {
     conn.name = conn.name.trim().to_string();
     conn.drive = conn.drive.trim().trim_end_matches(':').to_uppercase();
-    if conn.name.is_empty() || !clean(&conn.host) || !clean(&conn.user) || conn.port == 0 {
-        return Err("Revisa nombre, servidor, usuario y puerto (sin espacios ni \\ / ! @).".into());
-    }
     conn.key_path = conn.key_path.trim().to_string();
-    if conn.key_path.contains(|c: char| c == '"' || c == '\n' || c == '\r') {
-        return Err("La ruta de la clave no es válida.".into());
+    if conn.name.is_empty() {
+        return Err("Escribe un nombre para la conexión.".into());
     }
-    if conn.drive.len() != 1 || !conn.drive.chars().all(|c| c.is_ascii_uppercase()) {
-        return Err("La unidad debe ser una letra (A-Z).".into());
-    }
+    validate(&conn)?;
     if conn.id.is_empty() {
         conn.id = SystemTime::now().duration_since(UNIX_EPOCH).map_err(err)?.as_millis().to_string();
     }
@@ -203,9 +220,15 @@ fn mount_conn(app: &AppHandle, id: &str) -> Result<(), String> {
     if is_mounted(&c.drive) {
         return Err(format!("La unidad {}: ya está en uso.", c.drive));
     }
+    validate(&c)?;
     let exe = sshfs_path().ok_or("SSHFS-Win no está instalado.")?;
     // old versions put a Host alias for the key in ssh config; it is not needed any more
     let _ = set_ssh_block(&c.id, None);
+    // Trust on first use: the host key is remembered in our own file and a changed key is refused.
+    let known_hosts = app.path().app_config_dir().map_err(err)?.join("known_hosts").to_string_lossy().replace('\\', "/");
+    if known_hosts.contains(',') {
+        return Err("La carpeta de configuración no puede contener comas.".into());
+    }
     let path = c.remote_path.trim().replace('\\', "/");
     let path = if path.starts_with('/') { path } else { format!("/{}", path) };
 
@@ -213,7 +236,8 @@ fn mount_conn(app: &AppHandle, id: &str) -> Result<(), String> {
     cmd.arg(format!("{}@{}:{}", c.user, c.host, path))
         .arg(format!("{}:", c.drive))
         .args(["-f", "-ouid=-1,gid=-1", "-oidmap=user", "-ofstypename=SSHFS", "-orellinks"])
-        .args(["-oStrictHostKeyChecking=no", "-oUserKnownHostsFile=/dev/null"])
+        .arg("-oStrictHostKeyChecking=accept-new")
+        .arg(format!("-oUserKnownHostsFile={}", known_hosts))
         .arg(format!("-oPort={}", c.port))
         .arg(format!("-oVolumePrefix=/sshfs/{}@{}", c.user, c.host))
         .env("PATH", format!(r"{};{}", Path::new(exe).parent().unwrap().display(), std::env::var("PATH").unwrap_or_default()))
@@ -248,6 +272,12 @@ fn mount_conn(app: &AppHandle, id: &str) -> Result<(), String> {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         if is_mounted(&c.drive) {
+            // keep draining stderr so a full pipe can never block sshfs
+            if let Some(mut e) = child.stderr.take() {
+                std::thread::spawn(move || {
+                    let _ = std::io::copy(&mut e, &mut std::io::sink());
+                });
+            }
             children().lock().unwrap().insert(c.id.clone(), child);
             return Ok(());
         }

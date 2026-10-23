@@ -70,9 +70,12 @@ The GitHub Actions workflow in `.github/workflows/build.yml` does exactly this a
 
 ## Security
 
-- Passwords are kept in Windows Credential Manager (service `SftpDrive`).
-- Host keys are not verified (`StrictHostKeyChecking=no`), as SSHFS-Win does by default. Use it on networks you trust.
+- Passwords are kept in Windows Credential Manager (service `SftpDrive`) and sent to `sshfs` over stdin.
+- Host keys are trusted on first use and stored in `%APPDATA%\online.moiche.sftpdrive\known_hosts`; a changed key is refused.
 - SSH keys with a passphrase are not supported.
+- The installer is not code-signed, so Windows SmartScreen will warn you.
+
+A self-review with findings and fixes is in [SECURITY.md](SECURITY.md); it is not an independent audit.
 
 ## About this project
 

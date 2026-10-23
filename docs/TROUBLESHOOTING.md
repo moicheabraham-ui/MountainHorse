@@ -23,3 +23,7 @@ Remove it with `net use Z: /delete /y` (replace `Z`) or end the `sshfs.exe` proc
 ## Windows Explorer shows "You do not have permission to access \\sshfs.r\..."
 
 Open the drive letter (`Z:`), not the `\\sshfs.r\...` address. Explorer connects to that address with your Windows login, not with the SSH password.
+
+## "REMOTE HOST IDENTIFICATION HAS CHANGED" / host key verification failed
+
+Mountain Horse remembers each server's host key the first time you connect and refuses a different one, which protects you from someone impersonating the server. If you really reinstalled the server or changed its keys, delete its line from `%APPDATA%\online.moiche.sftpdrive\known_hosts` (or delete the file) and mount again. If you did not change anything, do not connect: the network may be intercepting the connection.

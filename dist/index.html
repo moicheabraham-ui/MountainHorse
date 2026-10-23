@@ -129,9 +129,9 @@ async function refresh() {
         <div class="sub">${esc(c.user)}@${esc(c.host)}:${c.port}${esc(c.remotePath || '/')}</div>
       </div>
       <div class="actions-row">
-        <button class="${c.mounted ? 'unmount' : ''}" data-a="${c.mounted ? 'unmount' : 'mount'}" data-id="${c.id}">${c.mounted ? 'Desmontar' : 'Montar'}</button>
-        <button class="ghost" data-a="edit" data-id="${c.id}">Editar</button>
-        <button class="bad" data-a="delete" data-id="${c.id}">Borrar</button>
+        <button class="${c.mounted ? 'unmount' : ''}" data-a="${c.mounted ? 'unmount' : 'mount'}" data-id="${esc(c.id)}">${c.mounted ? 'Desmontar' : 'Montar'}</button>
+        <button class="ghost" data-a="edit" data-id="${esc(c.id)}">Editar</button>
+        <button class="bad" data-a="delete" data-id="${esc(c.id)}">Borrar</button>
       </div>
     </div>`).join('') : '<div class="empty"><img src="icon.png" alt=""><b>Aún no hay conexiones</b>Pulsa «Nueva conexión» para montar tu primer servidor SFTP como una unidad.</div>';
 }

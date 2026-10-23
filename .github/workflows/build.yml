@@ -21,8 +21,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p src-tauri/resources
-          gh release download --repo winfsp/winfsp --pattern 'winfsp-*.msi' --output src-tauri/resources/winfsp.msi
-          gh release download --repo winfsp/sshfs-win --pattern 'sshfs-win-*-x64.msi' --output src-tauri/resources/sshfs-win.msi
+          # pinned versions + SHA-256, so a changed or tampered upstream release cannot end up in the installer
+          gh release download v2.1 --repo winfsp/winfsp --pattern 'winfsp-2.1.25156.msi' --output src-tauri/resources/winfsp.msi
+          gh release download v3.5.20357 --repo winfsp/sshfs-win --pattern 'sshfs-win-3.5.20357-x64.msi' --output src-tauri/resources/sshfs-win.msi
+          cd src-tauri/resources
+          echo "073a70e00f77423e34bed98b86e600def93393ba5822204fac57a29324db9f7a  winfsp.msi" | sha256sum -c -
+          echo "1657e397f8dce1c2d2e3220007f9c9f882631882b9bec4608f7835e87dcd096c  sshfs-win.msi" | sha256sum -c -
       - run: npx tauri build
       - uses: actions/upload-artifact@v4
         with:
