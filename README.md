@@ -24,6 +24,7 @@
 - **Tray icon**: closing the window keeps your mounts alive; mount and unmount from the tray menu.
 - **Auto-mount** chosen connections when the app starts, and **start with Windows**.
 - **One installer**: it also installs [WinFsp](https://winfsp.dev/) and [SSHFS-Win](https://github.com/winfsp/sshfs-win) if they are missing.
+- **In-app updates**: the app checks GitHub Releases and installs new versions for you (signed updates only).
 - Light and dark theme that follow Windows.
 
 ## Install
@@ -32,7 +33,7 @@
 2. Run it (it asks for administrator rights because it installs WinFsp and SSHFS-Win).
 3. Open **Mountain Horse** from the Start menu.
 
-Requires Windows 10 or 11 (64-bit).
+Requires Windows 10 or 11 (64-bit). From v0.1.4 on, the app updates itself: a banner appears when a new release is available, or use *Buscar actualizaciones* at the bottom of the window. Versions before 0.1.4 must be updated by hand once.
 
 ## Use
 

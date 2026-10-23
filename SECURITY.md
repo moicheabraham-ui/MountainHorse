@@ -23,7 +23,8 @@ Mountain Horse runs as a normal user, stores SFTP connection details and passwor
 | 7 | Low | Passwords live in process memory as ordinary strings and are written to the child's stdin; they are not zeroized. They never appear on the command line, in the connection file or in logs. | Open (accepted). |
 | 8 | Info | Passwords are stored with the `keyring` crate in Windows Credential Manager (per user, DPAPI). Other programs running as the same user can read them, as with any saved credential. | By design. |
 | 9 | Info | SSH keys with a passphrase are not supported (there is no way to pass the passphrase). Unencrypted private keys on disk are only as safe as the file permissions. | By design. |
-| 10 | Info | GitHub Actions use version tags (`@v4`), not commit SHAs, and workflows only run on pushes to `main` and tags, never on pull requests, so repository secrets are not exposed to forks. | Open (hardening: pin actions by SHA). |
+| 10 | Info | In-app updates (v0.1.4+) download `latest.json` and the installer from GitHub Releases. The updater only installs a package whose minisign signature matches the public key built into the app; the private key lives outside the repo (CI secret `TAURI_SIGNING_PRIVATE_KEY`). Losing the key means installed apps cannot be updated; a leaked key lets an attacker with release access push a malicious update. | By design; protect the key and the repository account (enable 2FA). |
+| 11 | Info | GitHub Actions use version tags (`@v4`), not commit SHAs, and workflows only run on pushes to `main` and tags, never on pull requests, so repository secrets are not exposed to forks. | Open (hardening: pin actions by SHA). |
 
 ## Checked and found fine
 

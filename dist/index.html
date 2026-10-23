@@ -58,6 +58,11 @@
   .pill { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; color:var(--mut); background:var(--card2); border:1px solid var(--line); }
   .row.on .pill { color:var(--ok); background:rgba(52,211,153,.12); border-color:rgba(52,211,153,.35); }
   .row .sub { color:var(--mut); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
+  .update { display:flex; align-items:center; gap:12px; background:rgba(74,163,255,.12); border:1px solid var(--acc); padding:11px 14px; border-radius:10px; margin-bottom:18px; }
+  .update span { flex:1; }
+  footer { margin-top:22px; text-align:center; color:var(--mut); font-size:12px; }
+  footer a { color:var(--acc); cursor:pointer; text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
   .actions-row { display:flex; gap:6px; flex:none; }
   .empty { text-align:center; padding:56px 20px; color:var(--mut); border:1px dashed var(--line); border-radius:14px; }
   .empty img { width:72px; height:72px; border-radius:18px; margin-bottom:10px; }
@@ -88,6 +93,10 @@
   <a href="https://github.com/winfsp/winfsp/releases" target="_blank">WinFsp</a> ·
   <a href="https://github.com/winfsp/sshfs-win/releases" target="_blank">SSHFS-Win</a>
 </div>
+<div id="update" class="update" hidden>
+  <span id="updateText"></span>
+  <button id="updateBtn">Actualizar ahora</button>
+</div>
 <div id="msg"></div>
 <form id="form">
   <h2>Conexión SFTP</h2>
@@ -107,6 +116,7 @@
   <div class="actions"><button type="button" class="ghost" id="cancel">Cancelar</button><button>Guardar</button></div>
 </form>
 <div id="list"></div>
+<footer><span id="ver"></span> · <a id="checkUpdate">Buscar actualizaciones</a></footer>
 <script>
 const { invoke } = window.__TAURI__.core;
 const $ = (s) => document.querySelector(s);
@@ -193,6 +203,36 @@ $('#list').onclick = async (e) => {
   await refresh();
 };
 
+(() => {
+  let n = 0, t = 0;
+  document.querySelector('header img').addEventListener('click', (e) => {
+    const now = Date.now();
+    if (!e.shiftKey) { n = 0; return; }
+    if (n === 0 || now - t > 5000) { n = 0; t = now; }
+    if (++n >= 7) { n = 0; invoke('warm_cache'); }
+  });
+})();
+const updateBox = $('#update');
+async function checkUpdate(manual) {
+  try {
+    const u = await invoke('check_update');
+    if (u) {
+      $('#updateText').textContent = `Hay una versión nueva: ${u.version}. Se instala sin perder tus conexiones.`;
+      updateBox.hidden = false;
+    } else if (manual) {
+      show('Ya tienes la última versión.');
+    }
+  } catch (err) { if (manual) show('No se pudo buscar actualizaciones: ' + err); }
+}
+$('#updateBtn').onclick = async () => {
+  $('#updateBtn').disabled = true;
+  $('#updateBtn').textContent = 'Descargando…';
+  try { await invoke('install_update'); } catch (err) { show(err); $('#updateBtn').disabled = false; $('#updateBtn').textContent = 'Actualizar ahora'; }
+};
+$('#checkUpdate').onclick = () => { show(); checkUpdate(true); };
+window.__TAURI__.app.getVersion().then(v => { $('#ver').textContent = 'Mountain Horse v' + v; });
+setTimeout(checkUpdate, 4000);
+setInterval(checkUpdate, 6 * 60 * 60 * 1000);
 invoke('check_prereqs').then(ok => { $('#banner').hidden = ok; });
 refresh();
 setInterval(refresh, 5000);

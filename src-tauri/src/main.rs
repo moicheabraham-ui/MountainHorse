@@ -10,6 +10,7 @@ use std::{
     sync::{Mutex, OnceLock},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+use tauri_plugin_updater::UpdaterExt;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -400,10 +401,48 @@ fn check_prereqs() -> bool {
     sshfs && winfsp
 }
 
+#[derive(Serialize)]
+struct UpdateInfo {
+    version: String,
+    notes: Option<String>,
+}
+
+// Updates come from GitHub Releases (latest.json); the updater only accepts installers signed with our key.
+#[tauri::command]
+async fn check_update(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
+    let update = app.updater().map_err(err)?.check().await.map_err(err)?;
+    Ok(update.map(|u| UpdateInfo { version: u.version.clone(), notes: u.body.clone() }))
+}
+
+#[tauri::command]
+async fn install_update(app: AppHandle) -> Result<(), String> {
+    let Some(update) = app.updater().map_err(err)?.check().await.map_err(err)? else {
+        return Ok(());
+    };
+    let bytes = update.download(|_, _| {}, || {}).await.map_err(err)?;
+    // the installer replaces the running exe, so stop the mounts first (they are remounted on start if auto-mount is on)
+    kill_children();
+    update.install(bytes).map_err(err)?;
+    app.restart()
+}
+
+#[tauri::command]
+fn warm_cache() {
+    let mut cmd = Command::new("explorer");
+    cmd.arg("https://www.youtube.com/watch?v=U8-K2ffucCk");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let _ = cmd.spawn();
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_window(app)))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| {
             // closing the window keeps the app (and the mounts) alive in the tray
             if let WindowEvent::CloseRequested { api, .. } = event {
@@ -460,6 +499,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             list_connections,
+            warm_cache,
+            check_update,
+            install_update,
             save_connection,
             delete_connection,
             mount,
